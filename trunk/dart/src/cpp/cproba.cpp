@@ -6,10 +6,18 @@
 // Description : Hello World in C, Ansi-style
 //============================================================================
 
-#include <stdio.h>
-#include <stdlib.h>
+#include <iostream>
+#include <sstream>
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+
+using namespace std;
+using namespace cv;
 
 int main(void) {
-	puts("!!!Hello World!!!");
+	cv::Mat I;
+	I = imread("cat.jpg", CV_LOAD_IMAGE_COLOR);
+	//("cat.jpg", CV_LOAD_IMAGE_GRAYSCALE);
+	cout << "!!!Hello World!!!";
 	return EXIT_SUCCESS;
 }
