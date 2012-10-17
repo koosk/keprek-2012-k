@@ -1,8 +1,7 @@
 %
 % Does a SART iteration.
 %
-function x = SART(W, p, k, x, freePixels, beta, gamma, numIters)
-    LAMBDA = 0.99;
+function x = SART(W, p, k, x, freePixels, beta, gamma, numIters, LAMBDA)
     d = size(W,1)/k;
     m = size(W,1);
     n = size(W,2);
