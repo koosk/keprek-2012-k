@@ -1,38 +1,37 @@
-function x = DART(p, R, W, numberOfProjections, ~)
-% Ellenorzesi lehetosegek:
-% 1. ellenorizni, hogy p es R dimenzioja megfelelo, vagyis p oszlop, R
-% pedig sorvektor
-% 2. ellenorizni, hogy R oszlopainak szama legalabb 2
-    FIX_PROBABILITY=0.15;
+function [x_dart t_dart time_dart x t time] = DART(p, R, W, numberOfProjections, C, FREE_PROBABILITY, LAMBDA, numIter)
+    tic
     n = size(W,2);
+    if size(C,1)~=size(C,2)
+        throw(MException('InputChk:BadInput','The given convolution matrix is not square!'));
+    end
+    c = ceil(size(C,1)/2);
     ALL_PIXELS = true(1,n);
     isAdaptive = 0;
-    if nargin==5
+    if nargout==6
         isAdaptive = 1;
     end
+    exactNumIter = 0;
+    if nargin==8
+        exactNumIter = 1;
+    end
+    
     [beta, gamma] = calc_beta_gamma(W, numberOfProjections);
 
     dim = sqrt(n);
-    %x0 = SART(W, p, numberOfProjections, repmat(0.5, 1, n),true(1,n), beta, gamma,1);
-    x0 = SART_mex(W, p, numberOfProjections, repmat(0.5, 1, n),ALL_PIXELS, beta, gamma, 1);
-%asdf = reshape(x0,64,64);
-%figure, imshow(asdf)
+    %x0 = SART_mex(W, p, numberOfProjections, repmat(0.5, 1, n),ALL_PIXELS, beta, gamma, 10, LAMBDA);
+    x0 = SART(W, p, numberOfProjections, repmat(0.0, 1, n), ALL_PIXELS, beta, gamma, 10, LAMBDA);
 
     tau = buildTau(R);
     t = 0;
-    %projErr = 1000000;
     prevProjErr = 1000001;
     %---------STEP1-----------------
     xt = x0;
+    clear x0;
     for adaptiveCounter=0:7
-        adaptiveCounter
         projErr = prevProjErr;
         prevProjErr = prevProjErr+1;
-        while (projErr<prevProjErr) && (t<500)
-        %while (t<30)
-        %t
-           %'step1'
-           %tic
+        %terminalas vagy parameterben beallitott iteracioszam alapjan vagy hiba es maximalis iteracioszam alapjan
+        while (exactNumIter && adaptiveCounter==0 && t<numIter) || ((~exactNumIter || adaptiveCounter~=0) && (projErr<prevProjErr) && (t<500))
             xt1 = xt;
             t = t+1;
             if t==1
@@ -40,97 +39,105 @@ function x = DART(p, R, W, numberOfProjections, ~)
             else
                 s = tresholdImage(xt1,tau,R,U);
             end
-           %toc
             %---------STEP2-----------------
-           %'step2'
-           %tic
             B = determineBoundaryPixels(s,adaptiveCounter,dim);%masodik parameter, hogy mennyi terhet max el, hogy ne legyen boundary
 
-            randomFreePixels = find(rand(1,n)>(1-FIX_PROBABILITY));
-            %U = union(B,randomFreePixels);
-                U = B;
-                for i=size(randomFreePixels,2)
+            U = B;
+            if adaptiveCounter==0
+                randomFreePixels = find(rand(1,n)>(1-FREE_PROBABILITY));
+                for i=1:size(randomFreePixels,2)
                     U(randomFreePixels(i)) = true;
                 end
-           %toc
+            end
             %---------STEP3-----------------
-           %'step3'
-           %tic
             y = s;
             for i=1:n
                 if U(i)
                     y(i) = xt1(i);
                 end
             end
-            %xt = SART(W, p, numberOfProjections,y,U, beta, gamma,10);
-            xt = SART_mex(W, p, numberOfProjections,y,U, beta, gamma,10);
-           %toc
+            %xt = SART_mex(W, p, numberOfProjections,y,U, beta, gamma, 10, LAMBDA);
+            xt = SART(W, p, numberOfProjections,y,U, beta, gamma, 10, LAMBDA);
             %---------STEP4-----------------simitas
-           %'step4'
-           %tic
-            %0.0375 0.0375 0.0375
-            %0.0375 0.7    0.0375
-            %0.0375 0.0375 0.0375
             y = xt;
-            if U(1) % contains helyett
-                y(1) = 0.7*xt(1) + 0.1*(xt(2)+xt(dim+1)+xt(dim+2));%egyszerusitve
-            end
-            if U(dim)
-                y(dim) = 0.7*xt(dim) + 0.1*(xt(dim-1)+xt(2*dim-1)+xt(2*dim));%egyszerusitve
-            end
-            if U(n-dim+1)%bal also
-                y(n-dim+1) = 0.7*xt(n-dim+1) + 0.1*(xt(n-2*dim+1)+xt(n-2*dim+2)+xt(n-dim+2));%egyszerusitve
-            end
-            if U(n)
-                y(n) = 0.7*xt(n) + 0.1*(xt(n-1)+xt(n-dim)+xt(n-dim-1));%egyszerusitve
-            end
-            for i=2:dim-1
-                if U(i)%fent
-                    y(i) = 0.7*xt(i) + 0.06*(xt(i-1)+xt(i+1)+xt(i+dim-1)+xt(i+dim)+xt(i+dim+1));%egyszerusitve
+           
+            for i=1:c-1
+                for l=i:dim-i+1
+                    for k=[(i-1)*dim+l,n-(i-1)*dim-l+1,(l-1)*dim+i,l*dim-i+1]
+                        if U(k)
+                            %3x3
+                            y(k) = C(c,c)*xt(k) + C(c-1,c-1)*xt(gvi(k-dim-1,n))+C(c-1,c)*xt(gvi(k-dim,n))+C(c-1,c+1)*xt(gvi(k-dim+1,n))+C(c,c-1)*xt(gvi(k-1,n))+C(c,c+1)*xt(gvi(k+1,n))+C(c+1,c-1)*xt(gvi(k+dim-1,n))+C(c+1,c)*xt(gvi(k+dim,n))+C(c+1,c+1)*xt(gvi(k+dim+1,n));
+                            %5x5
+                            if c>=3
+                                y(k) = y(k) + C(c-2,c-2)*xt(gvi(k-2*dim-2,n))+C(c-2,c-1)*xt(gvi(k-2*dim-1,n))+C(c-2,c)*xt(gvi(k-2*dim,n))+C(c-2,c+1)*xt(gvi(k-2*dim+1,n))+C(c-2,c+2)*xt(gvi(k-2*dim+2,n));
+                                y(k) = y(k) + C(c-1,c-2)*xt(gvi(k-dim-2,n))+C(c-2,c-2)*xt(gvi(k-2*dim-2,n))+C(c,c-2)*xt(gvi(k-2,n))+C(c,c+2)*xt(gvi(k+2,n));
+                                y(k) = y(k) + C(c+1,c-2)*xt(gvi(k+dim-2,n))+C(c+1,c+2)*xt(gvi(k+dim+2,n));
+                                y(k) = y(k) + C(c+2,c-2)*xt(gvi(k+2*dim-2,n))+C(c+2,c-1)*xt(gvi(k+2*dim-1,n))+C(c+2,c)*xt(gvi(k+2*dim,n))+C(c+2,c+1)*xt(gvi(k+2*dim+1,n))+C(c+2,c+2)*xt(gvi(k+2*dim+2,n));
+                            end
+                            %7x7
+                            if c>=4
+                                y(k) = y(k) + C(c-3,c-3)*xt(gvi(k-3*dim-3,n))+C(c-3,c-2)*xt(gvi(k-3*dim-2,n))+C(c-3,c-1)*xt(gvi(k-3*dim-1,n))+C(c-3,c)*xt(gvi(k-3*dim,n))+C(c-3,c+1)*xt(gvi(k-3*dim+1,n))+C(c-3,c+2)*xt(gvi(k-3*dim+2,n))+C(c-3,c+3)*xt(gvi(k-3*dim+3,n));
+                                y(k) = y(k) + C(c-2,c-3)*xt(gvi(k-2*dim-3,n))+C(c-2,c+3)*xt(gvi(k-2*dim+3,n));
+                                y(k) = y(k) + C(c-1,c-3)*xt(gvi(k-1*dim-3,n))+C(c-1,c+3)*xt(gvi(k-1*dim+3,n));
+                                y(k) = y(k) + C(c,c-3)*xt(gvi(k-3,n))+C(c,c+3)*xt(gvi(k+3,n));
+                                y(k) = y(k) + C(c+1,c-3)*xt(gvi(k+dim-3,n))+C(c+1,c+3)*xt(gvi(k+dim+3,n));
+                                y(k) = y(k) + C(c+2,c-3)*xt(gvi(k+2*dim-3,n))+C(c+2,c+3)*xt(gvi(k+2*dim+3,n));
+                                y(k) = y(k) + C(c+3,c-3)*xt(gvi(k+3*dim-3,n))+C(c+3,c-2)*xt(gvi(k+3*dim-2,n))+C(c+3,c-1)*xt(gvi(k+3*dim-1,n))+C(c+3,c)*xt(gvi(k+3*dim,n))+C(c+3,c+1)*xt(gvi(k+3*dim+1,n))+C(c+3,c+2)*xt(gvi(k+3*dim+2,n))+C(c+3,c+3)*xt(gvi(k+3*dim+3,n));
+                            end
+                        end
+                    end
                 end
-                j = n-dim+i;%lent
-                if U(j)
-                    y(j) = 0.7*xt(j) + 0.06*(xt(j-1)+xt(j+1)+xt(j-dim-1)+xt(j-dim)+xt(j-dim+1));%egyszerusitve
-                end
-                j = (i-1)*dim+1;%bal
-                if U(j)
-                    y(j) = 0.7*xt(j) + 0.06*(xt(j-dim)+xt(j-dim+1)+xt(j+1)+xt(j+dim)+xt(j+dim+1));
-                end
-                j = i*dim;%jobb
-                if U(j)
-                    y(j) = 0.7*xt(j) + 0.06*(xt(j-dim-1)+xt(j-dim)+xt(j-1)+xt(j+dim-1)+xt(j+dim));
-                end
             end
-            for i=2:dim-1
-                for j=2:dim-1
+            for i=c:dim-c+1
+                for j=c:dim-c+1
                     k = (i-1)*dim+j;
                     if U(k)
-                        y(k) = 0.7*xt(k) + 0.0375*(xt(k-dim-1)+xt(k-dim)+xt(k-dim+1)+xt(k-1)+xt(k+1)+xt(k+dim-1)+xt(k+dim)+xt(k+dim+1));
+                        %3x3
+                        y(k) = C(c,c)*xt(k) + C(c-1,c-1)*xt(k-dim-1)+C(c-1,c)*xt(k-dim)+C(c-1,c+1)*xt(k-dim+1)+C(c,c-1)*xt(k-1)+C(c,c+1)*xt(k+1)+C(c+1,c-1)*xt(k+dim-1)+C(c+1,c)*xt(k+dim)+C(c+1,c+1)*xt(k+dim+1);
+                        %5x5
+                        if c>=3
+                            y(k) = y(k) + C(c-2,c-2)*xt(k-2*dim-2)+C(c-2,c-1)*xt(k-2*dim-1)+C(c-2,c)*xt(k-2*dim)+C(c-2,c+1)*xt(k-2*dim+1)+C(c-2,c+2)*xt(k-2*dim+2);
+                            y(k) = y(k) + C(c-1,c-2)*xt(k-dim-2)+C(c-2,c-2)*xt(k-2*dim-2)+C(c,c-2)*xt(k-2)+C(c,c+2)*xt(k+2);
+                            y(k) = y(k) + C(c+1,c-2)*xt(k+dim-2)+C(c+1,c+2)*xt(k+dim+2);
+                            y(k) = y(k) + C(c+2,c-2)*xt(k+2*dim-2)+C(c+2,c-1)*xt(k+2*dim-1)+C(c+2,c)*xt(k+2*dim)+C(c+2,c+1)*xt(k+2*dim+1)+C(c+2,c+2)*xt(k+2*dim+2);
+                        end
+                        %7x7
+                        if c>=4
+                            y(k) = y(k) + C(c-3,c-3)*xt(k-3*dim-3)+C(c-3,c-2)*xt(k-3*dim-2)+C(c-3,c-1)*xt(k-3*dim-1)+C(c-3,c)*xt(k-3*dim)+C(c-3,c+1)*xt(k-3*dim+1)+C(c-3,c+2)*xt(k-3*dim+2)+C(c-3,c+3)*xt(k-3*dim+3);
+                            y(k) = y(k) + C(c-2,c-3)*xt(k-2*dim-3)+C(c-2,c+3)*xt(k-2*dim+3);
+                            y(k) = y(k) + C(c-1,c-3)*xt(k-1*dim-3)+C(c-1,c+3)*xt(k-1*dim+3);
+                            y(k) = y(k) + C(c,c-3)*xt(k-3)+C(c,c+3)*xt(k+3);
+                            y(k) = y(k) + C(c+1,c-3)*xt(k+dim-3)+C(c+1,c+3)*xt(k+dim+3);
+                            y(k) = y(k) + C(c+2,c-3)*xt(k+2*dim-3)+C(c+2,c+3)*xt(k+2*dim+3);
+                            y(k) = y(k) + C(c+3,c-3)*xt(k+3*dim-3)+C(c+3,c-2)*xt(k+3*dim-2)+C(c+3,c-1)*xt(k+3*dim-1)+C(c+3,c)*xt(k+3*dim)+C(c+3,c+1)*xt(k+3*dim+1)+C(c+3,c+2)*xt(k+3*dim+2)+C(c+3,c+3)*xt(k+3*dim+3);
+                        end
                     end
                 end
             end
             xt = y;
-           %toc
-             %---------STEP5-----------------
-           %'step5'
-           %tic
+            %---------STEP5-----------------
             if mod(t,3)==0 || t==1
                 prevProjErr = projErr;
-                projErr = norm(W*xt'-p,2);%%%
+                projErr = norm(W*xt'-p,2);
             end
-           %toc
         end
         
+        if adaptiveCounter==0
+            x_dart = tresholdImage(xt,tau,R,U);
+            t_dart = t;
+            time_dart = toc;
+        end
         if ~isAdaptive
             break;
         end
     end
-    t
-    prevProjErr
-    projErr
-    x = tresholdImage(xt,tau,R,U);
+    if isAdaptive
+        x = tresholdImage(xt,tau,R,U);
+        time = toc;
+    end
 end
 
+%A kuszoboleshez szukseges tau fuggvenyt allitja elo.
 function tau = buildTau(R)
     tau = zeros(1,size(R,2)-1);
     for i=1:size(R,2)-1
@@ -138,28 +145,33 @@ function tau = buildTau(R)
     end
 end
 
-function v = treshold(v,tau,R)
-    if v<tau(1)
-        v = R(1);
-        return
-    end
-    for i=1:size(tau,2)-1
-        if (v>=tau(i)) && (v<tau(i+1))
-            v = R(i+1);
-            return
-        end
-    end
-    v = R(size(R,2));
-end
-
+%Kuszoboli a a kepen a megadott szabad pixeleket a megadott kuszobolesi
+%ertekekkel.
 function x = tresholdImage(x,tau,R,freePixels)
     for i=1:size(x,2)
         if freePixels(i)
-            x(i) = treshold(x(i),tau,R);
+            %x(i) = treshold(x(i),tau,R);
+            if x(i)<tau(1)
+                x(i) = R(1);
+                continue
+            end
+            b = 1; %boolean, hogy a legnagyobb intenzitast kell-e neki ertekul adni.
+            for j=1:size(tau,2)-1
+                if (x(i)>=tau(j)) && (x(i)<tau(j+1))
+                    x(i) = R(j+1);
+                    b = 0;
+                    break
+                end
+            end
+            if b==1
+                x(i) = R(size(R,2));
+            end
         end
     end
 end
 
+%Hatarpixelek meghatarozasa. Az tartozik ebbe a halmazba, melynek 8
+%szomszedai kozul legalabb maxDistinctPixels szamu eltero intenzitasu.
 function B = determineBoundaryPixels(s,maxDistinctPixels,dim)
     B = false(1,dim*dim);
     for i=1:dim
@@ -199,8 +211,25 @@ function B = determineBoundaryPixels(s,maxDistinctPixels,dim)
             end
             
             if distinct>maxDistinctPixels
-                B((i-1)*dim+j) = true;% add fgv helyett
+                B((i-1)*dim+j) = true;
             end
         end
     end
+end
+
+%Egy olyan indexet ad vissza, ami mindenkepp a kepre hivatkozik. Abban az
+%esetben, ha a megadott index kilogna a kepbol, visszahelyezi azt a kepbe
+%ugy, mintha sokszor egymas melle lenne masolva ugyanaz a kep es a mellette
+%levobe lenne hivatkozva.
+%A getValidIndex roviditese a gvi nev.
+function j = gvi(i,n)
+    if (i<1)
+        j = i+n;
+        return
+    else if (i>n)
+        j = i-n;
+        return
+        end
+    end
+    j = i;
 end
