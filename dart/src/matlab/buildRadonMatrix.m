@@ -20,5 +20,6 @@ for x=1:imageSize
         Rmatrix(:,(y-1)*imageSize + x) = p2DRadon(:);
     end
 end
+Rmatrix = sparse(Rmatrix);
 
 end
