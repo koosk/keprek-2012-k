@@ -15,11 +15,11 @@ function [x_dart t_dart time_dart x t time] = DART(p, R, W, numberOfProjections,
         exactNumIter = 1;
     end
     
-    [beta, gamma] = calc_beta_gamma(W, numberOfProjections);
+    [sbeta, ngamma] = calc_sbeta_ngamma(W, numberOfProjections,LAMBDA);
 
     dim = sqrt(n);
     %x0 = SART_mex(W, p, numberOfProjections, repmat(0.5, 1, n),ALL_PIXELS, beta, gamma, 10, LAMBDA);
-    x0 = SART(W, p, numberOfProjections, repmat(0.0, 1, n), ALL_PIXELS, beta, gamma, 10, LAMBDA);
+    x0 = SART(W, p, numberOfProjections, repmat(0.0, 1, n), ALL_PIXELS, sbeta, ngamma, 10);
 
     tau = buildTau(R);
     t = 0;
@@ -57,7 +57,7 @@ function [x_dart t_dart time_dart x t time] = DART(p, R, W, numberOfProjections,
                 end
             end
             %xt = SART_mex(W, p, numberOfProjections,y,U, beta, gamma, 10, LAMBDA);
-            xt = SART(W, p, numberOfProjections,y,U, beta, gamma, 10, LAMBDA);
+            xt = SART(W, p, numberOfProjections,y,U, sbeta, ngamma, 3);
             %---------STEP4-----------------simitas
             y = xt;
            

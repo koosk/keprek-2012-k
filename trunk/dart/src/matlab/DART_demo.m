@@ -6,10 +6,9 @@
 %I = im2double(imread('../images/64/phantom8.png'));
 %I = im2double(imread('../images/64/bullseye_linear.png'));
 %I = im2double(imread('../images/other/joint_J6.tif'));
-I = phantom(64);
-tic
+I = phantom(128);
 R = unique(I(:))';
-numAngles=10;
+numAngles=32;
 angles = linspace(0,180-180/numAngles,numAngles);
 W = buildRadonMatrix(size(I,1),angles);
 p = W*I(:);
@@ -22,6 +21,7 @@ numberOfProjections = size(W,1)/size(angles,2);
 C = [0.0375 0.0375 0.0375;
      0.0375 0.7000 0.0375;
      0.0375 0.0375 0.0375];
+tic
 %[x x2] = DART_cimpl(p,R,W,numberOfProjections,beta,gamma);
 [x x2] = DART(p, R, W, numberOfProjections, C, 0.05, 0.3);
 toc
