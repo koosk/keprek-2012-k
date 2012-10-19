@@ -37,7 +37,7 @@ function [x_dart t_dart time_dart x t time] = DART(p, R, W, numberOfProjections,
             if t==1
                 s = tresholdImage(xt1,tau,R,ALL_PIXELS);
             else
-                s = tresholdImage(xt1,tau,R,U);
+               s = tresholdImage(xt1,tau,R,U);
             end
             %---------STEP2-----------------
             B = determineBoundaryPixels(s,adaptiveCounter,dim);%masodik parameter, hogy mennyi terhet max el, hogy ne legyen boundary
@@ -60,65 +60,15 @@ function [x_dart t_dart time_dart x t time] = DART(p, R, W, numberOfProjections,
             xt = SART(W, p, numberOfProjections,y,U, sbeta, ngamma, 3);
             %---------STEP4-----------------simitas
             y = xt;
-           
-            for i=1:c-1
-                for l=i:dim-i+1
-                    for k=[(i-1)*dim+l,n-(i-1)*dim-l+1,(l-1)*dim+i,l*dim-i+1]
-                        if U(k)
-                            %3x3
-                            y(k) = C(c,c)*xt(k) + C(c-1,c-1)*xt(gvi(k-dim-1,n))+C(c-1,c)*xt(gvi(k-dim,n))+C(c-1,c+1)*xt(gvi(k-dim+1,n))+C(c,c-1)*xt(gvi(k-1,n))+C(c,c+1)*xt(gvi(k+1,n))+C(c+1,c-1)*xt(gvi(k+dim-1,n))+C(c+1,c)*xt(gvi(k+dim,n))+C(c+1,c+1)*xt(gvi(k+dim+1,n));
-                            %5x5
-                            if c>=3
-                                y(k) = y(k) + C(c-2,c-2)*xt(gvi(k-2*dim-2,n))+C(c-2,c-1)*xt(gvi(k-2*dim-1,n))+C(c-2,c)*xt(gvi(k-2*dim,n))+C(c-2,c+1)*xt(gvi(k-2*dim+1,n))+C(c-2,c+2)*xt(gvi(k-2*dim+2,n));
-                                y(k) = y(k) + C(c-1,c-2)*xt(gvi(k-dim-2,n))+C(c-2,c-2)*xt(gvi(k-2*dim-2,n))+C(c,c-2)*xt(gvi(k-2,n))+C(c,c+2)*xt(gvi(k+2,n));
-                                y(k) = y(k) + C(c+1,c-2)*xt(gvi(k+dim-2,n))+C(c+1,c+2)*xt(gvi(k+dim+2,n));
-                                y(k) = y(k) + C(c+2,c-2)*xt(gvi(k+2*dim-2,n))+C(c+2,c-1)*xt(gvi(k+2*dim-1,n))+C(c+2,c)*xt(gvi(k+2*dim,n))+C(c+2,c+1)*xt(gvi(k+2*dim+1,n))+C(c+2,c+2)*xt(gvi(k+2*dim+2,n));
-                            end
-                            %7x7
-                            if c>=4
-                                y(k) = y(k) + C(c-3,c-3)*xt(gvi(k-3*dim-3,n))+C(c-3,c-2)*xt(gvi(k-3*dim-2,n))+C(c-3,c-1)*xt(gvi(k-3*dim-1,n))+C(c-3,c)*xt(gvi(k-3*dim,n))+C(c-3,c+1)*xt(gvi(k-3*dim+1,n))+C(c-3,c+2)*xt(gvi(k-3*dim+2,n))+C(c-3,c+3)*xt(gvi(k-3*dim+3,n));
-                                y(k) = y(k) + C(c-2,c-3)*xt(gvi(k-2*dim-3,n))+C(c-2,c+3)*xt(gvi(k-2*dim+3,n));
-                                y(k) = y(k) + C(c-1,c-3)*xt(gvi(k-1*dim-3,n))+C(c-1,c+3)*xt(gvi(k-1*dim+3,n));
-                                y(k) = y(k) + C(c,c-3)*xt(gvi(k-3,n))+C(c,c+3)*xt(gvi(k+3,n));
-                                y(k) = y(k) + C(c+1,c-3)*xt(gvi(k+dim-3,n))+C(c+1,c+3)*xt(gvi(k+dim+3,n));
-                                y(k) = y(k) + C(c+2,c-3)*xt(gvi(k+2*dim-3,n))+C(c+2,c+3)*xt(gvi(k+2*dim+3,n));
-                                y(k) = y(k) + C(c+3,c-3)*xt(gvi(k+3*dim-3,n))+C(c+3,c-2)*xt(gvi(k+3*dim-2,n))+C(c+3,c-1)*xt(gvi(k+3*dim-1,n))+C(c+3,c)*xt(gvi(k+3*dim,n))+C(c+3,c+1)*xt(gvi(k+3*dim+1,n))+C(c+3,c+2)*xt(gvi(k+3*dim+2,n))+C(c+3,c+3)*xt(gvi(k+3*dim+3,n));
-                            end
-                        end
-                    end
-                end
-            end
-            for i=c:dim-c+1
-                for j=c:dim-c+1
-                    k = (i-1)*dim+j;
-                    if U(k)
-                        %3x3
-                        y(k) = C(c,c)*xt(k) + C(c-1,c-1)*xt(k-dim-1)+C(c-1,c)*xt(k-dim)+C(c-1,c+1)*xt(k-dim+1)+C(c,c-1)*xt(k-1)+C(c,c+1)*xt(k+1)+C(c+1,c-1)*xt(k+dim-1)+C(c+1,c)*xt(k+dim)+C(c+1,c+1)*xt(k+dim+1);
-                        %5x5
-                        if c>=3
-                            y(k) = y(k) + C(c-2,c-2)*xt(k-2*dim-2)+C(c-2,c-1)*xt(k-2*dim-1)+C(c-2,c)*xt(k-2*dim)+C(c-2,c+1)*xt(k-2*dim+1)+C(c-2,c+2)*xt(k-2*dim+2);
-                            y(k) = y(k) + C(c-1,c-2)*xt(k-dim-2)+C(c-2,c-2)*xt(k-2*dim-2)+C(c,c-2)*xt(k-2)+C(c,c+2)*xt(k+2);
-                            y(k) = y(k) + C(c+1,c-2)*xt(k+dim-2)+C(c+1,c+2)*xt(k+dim+2);
-                            y(k) = y(k) + C(c+2,c-2)*xt(k+2*dim-2)+C(c+2,c-1)*xt(k+2*dim-1)+C(c+2,c)*xt(k+2*dim)+C(c+2,c+1)*xt(k+2*dim+1)+C(c+2,c+2)*xt(k+2*dim+2);
-                        end
-                        %7x7
-                        if c>=4
-                            y(k) = y(k) + C(c-3,c-3)*xt(k-3*dim-3)+C(c-3,c-2)*xt(k-3*dim-2)+C(c-3,c-1)*xt(k-3*dim-1)+C(c-3,c)*xt(k-3*dim)+C(c-3,c+1)*xt(k-3*dim+1)+C(c-3,c+2)*xt(k-3*dim+2)+C(c-3,c+3)*xt(k-3*dim+3);
-                            y(k) = y(k) + C(c-2,c-3)*xt(k-2*dim-3)+C(c-2,c+3)*xt(k-2*dim+3);
-                            y(k) = y(k) + C(c-1,c-3)*xt(k-1*dim-3)+C(c-1,c+3)*xt(k-1*dim+3);
-                            y(k) = y(k) + C(c,c-3)*xt(k-3)+C(c,c+3)*xt(k+3);
-                            y(k) = y(k) + C(c+1,c-3)*xt(k+dim-3)+C(c+1,c+3)*xt(k+dim+3);
-                            y(k) = y(k) + C(c+2,c-3)*xt(k+2*dim-3)+C(c+2,c+3)*xt(k+2*dim+3);
-                            y(k) = y(k) + C(c+3,c-3)*xt(k+3*dim-3)+C(c+3,c-2)*xt(k+3*dim-2)+C(c+3,c-1)*xt(k+3*dim-1)+C(c+3,c)*xt(k+3*dim)+C(c+3,c+1)*xt(k+3*dim+1)+C(c+3,c+2)*xt(k+3*dim+2)+C(c+3,c+3)*xt(k+3*dim+3);
-                        end
-                    end
-                end
-            end
+            y = imcomplement(U) .* xt + U .* reshape(conv2(reshape(xt,dim,dim),C,'same'),1,n);
             xt = y;
+            s = tresholdImage(xt1,tau,R,U);
             %---------STEP5-----------------
             if mod(t,3)==0 || t==1
                 prevProjErr = projErr;
+                %projErr = norm(W*tresholdImage(xt,tau,R,U)'-p,2);
                 projErr = norm(W*xt'-p,2);
+                %projErr = norm(W*s'-p,2);
             end
         end
         
