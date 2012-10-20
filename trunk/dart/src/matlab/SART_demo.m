@@ -1,5 +1,5 @@
-%I = im2double(imread('../images/64/phantom1.png'));
-I = phantom(128);
+I = im2double(imread('../../resources/img/128/phantom7.png'));
+%I = phantom(128);
 numAngles=10;
 angles = linspace(0,180-180/numAngles,numAngles);
 W = buildRadonMatrix(size(I,1),angles);
