@@ -59,10 +59,11 @@ function [x_dart t_dart time_dart x t time] = DART(p, R, W, numberOfProjections,
             %xt = SART_mex(W, p, numberOfProjections,y,U, beta, gamma, 10, LAMBDA);
             xt = SART(W, p, numberOfProjections,y,U, sbeta, ngamma, 3);
             %---------STEP4-----------------simitas
-            y = xt;
+            %y = xt;
             y = imcomplement(U) .* xt + U .* reshape(conv2(reshape(xt,dim,dim),C,'same'),1,n);
+            %y = imcomplement(U) .* xt + U .* reshape(medfilt2(reshape(xt,dim,dim)),1,n);
             xt = y;
-            s = tresholdImage(xt1,tau,R,U);
+            %s = tresholdImage(xt1,tau,R,U);
             %---------STEP5-----------------
             if mod(t,3)==0 || t==1
                 prevProjErr = projErr;

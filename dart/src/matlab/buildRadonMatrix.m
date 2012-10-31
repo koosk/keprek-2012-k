@@ -7,7 +7,7 @@ phantomImage = phantom(imageSize);
 k = size(radon(phantomImage,90),1);
 
 %% Build the Radon matrix to do the forward projection
-Rmatrix = zeros(length(thetaAngles)*k, imageSize^2);
+Rmatrix = spalloc(length(thetaAngles)*k, imageSize^2, round(length(thetaAngles)*k*imageSize*sqrt(2)));
 for x=1:imageSize
     for y=1:imageSize
         
@@ -17,9 +17,8 @@ for x=1:imageSize
         
         % Apply the Radon transformation for the delta function image
         p2DRadon = radon(deltaImage,thetaAngles);
-        Rmatrix(:,(y-1)*imageSize + x) = p2DRadon(:);
+        Rmatrix(:,(y-1)*imageSize + x) = p2DRadon(:);%ritka matrixok ilyen fajta indexelese bal oldalon nem javasolt
     end
 end
-Rmatrix = sparse(Rmatrix);
 
 end
