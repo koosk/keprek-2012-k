@@ -1,0 +1,1 @@
+Feladatkiírás: Bináris kép rekonstruálása úgy, hogy annak csak néhány vetülete ismert, és azt is csak megközelítőleg tudjuk, hogy azok milyen irányból készültek
